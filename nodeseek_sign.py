@@ -206,31 +206,31 @@ def sign():
             'proxy_status': f"已启用 ({PROXY})" if USE_PROXY and PROXY else "未使用"
         }
         
-        status_text = "\\n".join([
+        status_text = "\n".join([
             f"请求耗时：{status_info['response_time']}",
             f"随机签到：{status_info['random_mode']}",
             f"代理状态：{status_info['proxy_status']}"
         ])
         
         if success is True:
-            result_message = f"签到成功！获得{gain}个鸡腿，当前共有{current}个鸡腿\\n{status_text}"
-            print(result_message.replace("\\n", "\n"))
+            result_message = f"签到成功！获得{gain}个鸡腿，当前共有{current}个鸡腿\n{status_text}"
+            print(result_message)
             return "success", result_message
         elif message and "已完成签到" in message:
-            result_message = f"今日已签到：{message}\\n{status_text}"
-            print(result_message.replace("\\n", "\n"))
+            result_message = f"今日已签到：{message}\n{status_text}"
+            print(result_message)
             return "already_signed", result_message
         elif message == "USER NOT FOUND" or (response_data.get('status') == 404):
-            result_message = f"Cookie已失效：USER NOT FOUND\\n{status_text}"
-            print(result_message.replace("\\n", "\n"))
+            result_message = f"Cookie已失效：USER NOT FOUND\n{status_text}"
+            print(result_message)
             return "invalid_cookie", result_message
         else:
-            result_message = f"签到失败，原因：{message}\\n{status_text}"
-            print(result_message.replace("\\n", "\n"))
+            result_message = f"签到失败，原因：{message}\n{status_text}"
+            print(result_message)
             return "fail", result_message
     except requests.exceptions.ProxyError as e:
-        error_message = f"代理服务器连接失败：{str(e)}\\n代理地址：{PROXY}"
-        print(error_message.replace("\\n", "\n"))
+        error_message = f"代理服务器连接失败：{str(e)}\n代理地址：{PROXY}"
+        print(error_message)
         return "error", error_message
     except requests.exceptions.ConnectionError as e:
         error_message = "网络连接失败，请检查网络状态"
@@ -241,8 +241,8 @@ def sign():
         print(error_message)
         return "error", error_message
     except Exception as e:
-        error_message = f"发生异常: {str(e)}\\n实际响应内容: {response.text if 'response' in locals() else '没有响应'}"
-        print(error_message.replace("\\n", "\n"))
+        error_message = f"发生异常: {str(e)}\n实际响应内容: {response.text if 'response' in locals() else '没有响应'}"
+        print(error_message)
         return "error", error_message
 
 if __name__ == "__main__":
@@ -256,6 +256,9 @@ if __name__ == "__main__":
             'random_sign': "是" if NS_RANDOM.lower() == "true" else "否"
         }
         
+        # 确保content中的换行符是真实的换行符
+        content = content.replace('\\n', '\n')
+        
         return f"""
 === NodeSeek 签到通知 ===
 时间：{current_time}
@@ -267,8 +270,7 @@ if __name__ == "__main__":
 - 操作系统：{env_info['os_platform']}
 - 启用代理：{env_info['proxy_enabled']}
 - 随机签到：{env_info['random_sign']}
-==================
-"""
+=================="""
 
     if NS_COOKIE:
         sign_result, sign_message = sign()
