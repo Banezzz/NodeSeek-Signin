@@ -165,7 +165,10 @@ def sign():
         print("请先设置Cookie")
         return "no_cookie", "未设置Cookie"
         
-    url = f"https://www.nodeseek.com/api/attendance?random={NS_RANDOM}"
+    # 从环境变量读取随机签到设置
+    is_random = NS_RANDOM.lower() == "true"
+    url = f"https://www.nodeseek.com/api/attendance{'?random=true' if is_random else '?random=false'}"
+    
     headers = {
         'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0",
         'sec-ch-ua': "\"Not A(Brand\";v=\"99\", \"Microsoft Edge\";v=\"121\", \"Chromium\";v=\"121\"",
@@ -199,7 +202,7 @@ def sign():
         # 构建详细的状态信息
         status_info = {
             'response_time': f"{response_time}秒",
-            'random_mode': "已开启" if NS_RANDOM.lower() == "true" else "已关闭",
+            'random_mode': "已开启" if is_random else "已关闭",
             'proxy_status': f"已启用 ({PROXY})" if USE_PROXY and PROXY else "未使用"
         }
         
