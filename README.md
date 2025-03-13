@@ -1,6 +1,6 @@
 # NodeSeek-Signin
 
-NodeSeek论坛签到，借助github action或青龙面板 自动触发，默认选择随机签到
+NodeSeek论坛签到，借助github action或青龙面板 自动触发。支持随机签到和固定签到模式。
 
 ## Action
 
@@ -11,6 +11,7 @@ NodeSeek论坛签到，借助github action或青龙面板 自动触发，默认�
 | 名称 | 含义 |
 | --- | --- |
 | NS_COOKIE | 论坛用户cookie，自行在浏览器F12中查看 |
+| NS_RANDOM | 是否启用随机签到，true为随机签到，false为固定签到，默认为true |
 | TG_BOT_TOKEN | tg 机器人的 TG_BOT_TOKEN，例：1407203283:AAG9rt-6RDaaX0HBLZQq0laNOh898iFYaRQ，非必需 |
 | TG_USER_ID | tg 机器人的 TG_USER_ID，例：1434078534，非必需 |
 | TG_THREAD_ID | tg 机器人的 TG_THREAD_ID 超级群组话题id，非必需 |
@@ -28,7 +29,10 @@ ql raw https://raw.githubusercontent.com/Banezzz/NodeSeek-Signin/main/nodeseek_s
 
 ## 功能特点
 
-- ✅ 支持随机签到
+- ✅ 支持随机/固定签到模式
+  - 通过环境变量 `NS_RANDOM` 控制
+  - `true`: 随机签到（默认）
+  - `false`: 固定签到
 - ✅ 自动处理验证码
 - ✅ Cookie失效自动重新登录
 - ✅ 支持代理设置
