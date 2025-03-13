@@ -163,7 +163,7 @@ def session_login():
 def sign():
     if not NS_COOKIE:
         print("请先设置Cookie")
-        return "no_cookie", ""
+        return "no_cookie", "未设置Cookie"
         
     url = f"https://www.nodeseek.com/api/attendance?random={NS_RANDOM}"
     headers = {
@@ -181,46 +181,104 @@ def sign():
     }
 
     try:
+        start_time = time.time()
         if USE_PROXY and PROXY:
             print(f"使用代理: {PROXY}")
             response = requests.post(url, headers=headers, impersonate="chrome110", proxies={"http": PROXY, "https": PROXY})
         else:
             response = requests.post(url, headers=headers, impersonate="chrome110")
+        response_time = round(time.time() - start_time, 2)
+        
         response_data = response.json()
         print(response_data)
         message = response_data.get('message', '')
         success = response_data.get('success')
+        gain = response_data.get('gain', 0)
+        current = response_data.get('current', 0)
         
-        if success == "true":
-            print(f"签到成功: {message}")
-            return "success", message
+        # 构建详细的状态信息
+        status_info = {
+            'response_time': f"{response_time}秒",
+            'random_mode': "已开启" if NS_RANDOM.lower() == "true" else "已关闭",
+            'proxy_status': f"已启用 ({PROXY})" if USE_PROXY and PROXY else "未使用"
+        }
+        
+        status_text = "\\n".join([
+            f"请求耗时：{status_info['response_time']}",
+            f"随机签到：{status_info['random_mode']}",
+            f"代理状态：{status_info['proxy_status']}"
+        ])
+        
+        if success is True:
+            result_message = f"签到成功！获得{gain}个鸡腿，当前共有{current}个鸡腿\\n{status_text}"
+            print(result_message.replace("\\n", "\n"))
+            return "success", result_message
         elif message and "已完成签到" in message:
-            print(f"已经签到过: {message}")
-            return "already_signed", message
+            result_message = f"今日已签到：{message}\\n{status_text}"
+            print(result_message.replace("\\n", "\n"))
+            return "already_signed", result_message
         elif message == "USER NOT FOUND" or (response_data.get('status') == 404):
-            print("Cookie已失效: USER NOT FOUND")
-            return "invalid_cookie", message
+            result_message = f"Cookie已失效：USER NOT FOUND\\n{status_text}"
+            print(result_message.replace("\\n", "\n"))
+            return "invalid_cookie", result_message
         else:
-            print(f"签到失败: {message}")
-            return "fail", message
+            result_message = f"签到失败，原因：{message}\\n{status_text}"
+            print(result_message.replace("\\n", "\n"))
+            return "fail", result_message
+    except requests.exceptions.ProxyError as e:
+        error_message = f"代理服务器连接失败：{str(e)}\\n代理地址：{PROXY}"
+        print(error_message.replace("\\n", "\n"))
+        return "error", error_message
+    except requests.exceptions.ConnectionError as e:
+        error_message = "网络连接失败，请检查网络状态"
+        print(error_message)
+        return "error", error_message
+    except requests.exceptions.Timeout as e:
+        error_message = "请求超时，请稍后重试"
+        print(error_message)
+        return "error", error_message
     except Exception as e:
-        print("发生异常:", e)
-        print("实际响应内容:", response.text if 'response' in locals() else "没有响应")
-        return "error", str(e)
+        error_message = f"发生异常: {str(e)}\\n实际响应内容: {response.text if 'response' in locals() else '没有响应'}"
+        print(error_message.replace("\\n", "\n"))
+        return "error", error_message
 
 if __name__ == "__main__":
+    def format_notification(title, content):
+        current_time = time.strftime("%Y-%m-%d %H:%M:%S")
+        # 获取运行环境信息
+        env_info = {
+            'python_version': sys.version.split()[0],
+            'os_platform': sys.platform,
+            'proxy_enabled': "是" if USE_PROXY else "否",
+            'random_sign': "是" if NS_RANDOM.lower() == "true" else "否"
+        }
+        
+        return f"""
+=== NodeSeek 签到通知 ===
+时间：{current_time}
+状态：{title}
+详情：{content}
+
+运行环境：
+- Python版本：{env_info['python_version']}
+- 操作系统：{env_info['os_platform']}
+- 启用代理：{env_info['proxy_enabled']}
+- 随机签到：{env_info['random_sign']}
+==================
+"""
+
     if NS_COOKIE:
         sign_result, sign_message = sign()
         
         if sign_result in ["success", "already_signed"]:
             if sign_result == "success":
-                print("签到成功")
+                notification_title = "✅ 签到成功"
                 if hadsend:
-                    send("nodeseek签到", f"{sign_message}")
+                    send("NodeSeek签到通知", format_notification(notification_title, sign_message))
             else:
-                print("今天已经签到过了")
+                notification_title = "ℹ️ 今日已签到"
                 if hadsend:
-                    send("nodeseek签到", f"{sign_message}")
+                    send("NodeSeek签到通知", format_notification(notification_title, sign_message))
         elif sign_result in ["invalid_cookie", "error", "fail"]:
             if USER and PASS:
                 print("Cookie失效或签到异常，尝试重新登录...")
@@ -231,21 +289,25 @@ if __name__ == "__main__":
                     sign_result, sign_message = sign()
                     
                     if sign_result in ["success", "already_signed"]:
-                        print("使用新Cookie签到成功")
+                        notification_title = "✅ 重新登录并签到成功"
+                        notification_content = f"{sign_message}\n新Cookie已生成，请及时更新"
                         if hadsend:
-                            send("nodeseek签到", f"{sign_message}\nCookie: {cookie}")
+                            send("NodeSeek签到通知", format_notification(notification_title, notification_content))
                     else:
-                        print("使用新Cookie签到失败")
+                        notification_title = "❌ 重新登录后签到失败"
+                        notification_content = f"签到结果：{sign_message}\n请检查账号状态"
                         if hadsend:
-                            send("nodeseek签到", f"{sign_message}")
+                            send("NodeSeek签到通知", format_notification(notification_title, notification_content))
                 else:
-                    print("重新登录失败")
+                    notification_title = "❌ 重新登录失败"
+                    notification_content = "无法获取新的Cookie，请检查账号密码是否正确"
                     if hadsend:
-                        send("nodeseek登录", "登录失败")
+                        send("NodeSeek签到通知", format_notification(notification_title, notification_content))
             else:
-                print("Cookie失效或签到异常，但未设置用户名密码，无法重新登录")
+                notification_title = "⚠️ Cookie已失效"
+                notification_content = "未配置用户名密码，无法自动重新登录，请手动更新Cookie"
                 if hadsend:
-                    send("nodeseek签到", "Cookie已失效，未设置用户名密码，无法重新登录")
+                    send("NodeSeek签到通知", format_notification(notification_title, notification_content))
     else:
         if USER and PASS:
             print("没有找到Cookie，尝试登录获取...")
@@ -256,18 +318,22 @@ if __name__ == "__main__":
                 sign_result, sign_message = sign()
                 
                 if sign_result in ["success", "already_signed"]:
-                    print("首次登录签到成功")
+                    notification_title = "✅ 首次登录签到成功"
+                    notification_content = f"{sign_message}\nCookie已生成，请妥善保存"
                     if hadsend:
-                        send("nodeseek签到", f"{sign_message}\nCookie: {cookie}")
+                        send("NodeSeek签到通知", format_notification(notification_title, notification_content))
                 else:
-                    print("首次登录签到失败")
+                    notification_title = "❌ 首次登录签到失败"
+                    notification_content = f"签到结果：{sign_message}\n请检查账号状态"
                     if hadsend:
-                        send("nodeseek签到", f"{sign_message}")
+                        send("NodeSeek签到通知", format_notification(notification_title, notification_content))
             else:
-                print("登录失败")
+                notification_title = "❌ 首次登录失败"
+                notification_content = "无法获取Cookie，请检查账号密码是否正确"
                 if hadsend:
-                    send("nodeseek登录", "登录失败")
+                    send("NodeSeek签到通知", format_notification(notification_title, notification_content))
         else:
-            print("没有Cookie且未设置用户名密码，无法执行任何操作")
+            notification_title = "⚠️ 无法执行签到"
+            notification_content = "未设置Cookie且未配置用户名密码，无法执行任何操作"
             if hadsend:
-                send("nodeseek签到", "没有Cookie且未设置用户名密码，无法执行任何操作")
+                send("NodeSeek签到通知", format_notification(notification_title, notification_content))
