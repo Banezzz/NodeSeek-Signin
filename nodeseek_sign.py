@@ -348,22 +348,32 @@ def format_notification(title, content):
     }
     
     # 确保content中的换行符是真实的换行符
-    content = content.replace('\\n', '\n')
+    content = content.replace('\\\\n', '\\n') # Python的f-string会自动处理换行，但保险起见还是替换一下
     
+    # 构建通知主体内容
+    details_list = content.split('\\n')
+    main_detail = details_list[0]
+    additional_details = "\\n".join([f"  - {d}" for d in details_list[1:] if d.strip()])
+
+    if additional_details:
+        formatted_content = f"{main_detail}\\n{additional_details}"
+    else:
+        formatted_content = main_detail
+
     return f"""
-╭──────────── NodeSeek 签到通知 ────────────╮
-│                                          │
-│ 🕒 时间：{current_time}
-│ 📌 状态：{title}
-│ 📝 详情：{content}
-│                                          │
-├─────────────── 运行环境 ───────────────────┤
-│ 🐍 Python版本：{env_info['python_version']}
-│ 💻 操作系统：{env_info['os_platform']}
-│ 🌐 启用代理：{env_info['proxy_enabled']}
-│ 🎲 随机签到：{env_info['random_sign']}
-│                                          │
-╰──────────────────────────────────────────╯"""
+**NodeSeek 签到通知**
+
+🕒 **时间：** {current_time}
+📌 **状态：** {title}
+📝 **详情：**
+{formatted_content}
+
+⚙️ **运行环境：**
+  - Python版本：{env_info['python_version']}
+  - 操作系统：{env_info['os_platform']}
+  - 启用代理：{env_info['proxy_enabled']}
+  - 随机签到：{env_info['random_sign']}
+"""
 
 # ---------------- 主流程 ----------------
 if __name__ == "__main__":
